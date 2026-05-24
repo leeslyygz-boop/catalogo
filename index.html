@@ -777,7 +777,7 @@
     // Product pages
     sec.products.forEach((p, pIdx) => {
       const photoHTML = p.photo
-        ? `<img src="${p.photo}" alt="${p.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        ? `<img data-src="${p.photo}" alt="${p.name}" loading="lazy" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
            <div class="placeholder" style="display:none">[ Foto: ${p.photo} ]<small>Pega tu imagen con este nombre en la carpeta "fotos"</small></div>`
         : `<div class="placeholder">[ Espacio para foto ]<small>Edita el HTML y agrega ruta en "photo"</small></div>`;
 
@@ -835,6 +835,19 @@
 
   pageEls.forEach((p, i) => { p.style.zIndex = total - i; });
 
+  // Lazy load images: carga la foto de la página actual ± 2 páginas
+  function loadNearbyImages() {
+    const range = 2;
+    pageEls.forEach((p, i) => {
+      const img = p.querySelector('img[data-src]');
+      if (!img) return;
+      if (Math.abs(i - current) <= range) {
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+      }
+    });
+  }
+
   function updateUI() {
     document.getElementById('current-page').textContent = current + 1;
     document.getElementById('info-label').textContent = pageMeta[current].label;
@@ -852,6 +865,7 @@
     }
     current = target;
     updateUI();
+    loadNearbyImages();
   }
 
   document.getElementById('btn-next').addEventListener('click', () => goTo(current + 1));
@@ -882,6 +896,7 @@
   });
 
   updateUI();
+  loadNearbyImages();
 </script>
 </body>
 </html>
