@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo de Eventos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #1F2937;
+    --accent: #C9A227;
+    --light: #F5F5F5;
+    --muted: #9CA3AF;
+    --line: #E5E7EB;
+    --paper: #FDFCF8;
+  }
+
+  html, body {
+    height: 100%;
+    background: radial-gradient(circle at center, #2a2a2a 0%, #0f0f0f 100%);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--primary);
+    overflow: hidden;
+  }
+
+  .app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .book-wrapper {
+    flex: 1;
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    perspective: 2500px;
+  }
+
+  .book {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1.414;
+    max-height: 82vh;
+    transform-style: preserve-3d;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  }
+
+  .page {
+    position: absolute;
+    inset: 0;
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    transition: transform 0.9s cubic-bezier(0.65, 0, 0.35, 1);
+    cursor: pointer;
+  }
+  .page.flipped { transform: rotateY(-180deg); }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  .face.back {
+    transform: rotateY(180deg);
+    background: repeating-linear-gradient(45deg, #f0ede4 0 2px, #f5f1e6 2px 6px);
+  }
+
+  .nav-zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40%;
+    z-index: 10;
+  }
+  .nav-zone.left { left: 0; cursor: w-resize; }
+  .nav-zone.right { right: 0; cursor: e-resize; }
+
+  /* ---------- COVER ---------- */
+  .cover {
+    background: linear-gradient(135deg, #1F2937 0%, #2c3e50 100%);
+    color: white;
+    padding: 44px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+  }
+  .cover .accent-bar {
+    width: 80px;
+    height: 4px;
+    background: var(--accent);
+    margin-bottom: 18px;
+  }
+  .cover .eyebrow {
+    color: var(--accent);
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .cover h1 {
+    font-size: clamp(40px, 7vw, 68px);
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+  }
+  .cover .subtitle {
+    color: var(--accent);
+    font-size: clamp(13px, 2vw, 18px);
+    margin-top: 14px;
+    font-style: italic;
+  }
+  .cover .brand {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  .cover .brand-line {
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 6px;
+    letter-spacing: 0.5px;
+  }
+  .cover-hint {
+    position: absolute;
+    bottom: 16px;
+    right: 20px;
+    color: rgba(255,255,255,0.4);
+    font-size: 10px;
+    z-index: 11;
+    pointer-events: none;
+  }
+
+  /* ---------- INDEX ---------- */
+  .index {
+    padding: 38px 32px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .index h2 {
+    font-size: 30px;
+    color: var(--primary);
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+  }
+  .index .rule {
+    width: 60px;
+    height: 3px;
+    background: var(--accent);
+    margin-bottom: 8px;
+  }
+  .index .hint {
+    color: var(--muted);
+    font-size: 10px;
+    margin-bottom: 18px;
+  }
+  .index-list {
+    list-style: none;
+    flex: 1;
+  }
+  .index-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-bottom: 1px solid var(--line);
+  }
+  .index-item:hover { background: #FAF3D8; }
+  .index-roman {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 14px;
+    width: 36px;
+    font-family: Georgia, serif;
+  }
+  .index-info { flex: 1; }
+  .index-name {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--primary);
+    letter-spacing: 0.3px;
+  }
+  .index-desc {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .index-count {
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ---------- SECTION HEADER ---------- */
+  .section-header {
+    height: 100%;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 50px;
+    position: relative;
+  }
+  .section-header .top-link {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    color: rgba(255,255,255,0.7);
+    font-size: 10px;
+    cursor: pointer;
+    z-index: 11;
+  }
+  .section-header .top-link:hover { color: white; }
+  .section-roman {
+    font-family: Georgia, serif;
+    font-size: 72px;
+    line-height: 1;
+    color: rgba(255,255,255,0.3);
+    margin-bottom: 6px;
+  }
+  .section-eyebrow {
+    color: rgba(255,255,255,0.7);
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .section-header h2 {
+    font-size: 44px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1.05;
+    margin-bottom: 14px;
+  }
+  .section-header .section-bar {
+    width: 80px;
+    height: 4px;
+    background: white;
+    margin-bottom: 14px;
+  }
+  .section-header .section-subtitle {
+    font-size: 14px;
+    color: rgba(255,255,255,0.85);
+    max-width: 380px;
+    line-height: 1.5;
+  }
+  .section-header .section-count {
+    position: absolute;
+    bottom: 30px;
+    left: 50px;
+    color: rgba(255,255,255,0.6);
+    font-size: 10px;
+    letter-spacing: 2px;
+  }
+
+  /* ---------- PRODUCT ---------- */
+  .product {
+    padding: 28px 30px 44px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .product .top-link {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    color: var(--muted);
+    font-size: 10px;
+    cursor: pointer;
+    z-index: 11;
+  }
+  .product .top-link:hover { color: var(--accent); }
+  .product .label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .product h3 {
+    font-size: 22px;
+    margin: 4px 0 4px;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+  .product .rule {
+    width: 40px;
+    height: 3px;
+    margin-bottom: 14px;
+  }
+  .photo-box {
+    flex: 1;
+    min-height: 200px;
+    background: var(--light);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .photo-box::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border: 1.5px dashed var(--muted);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+  .photo-box .placeholder {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 11px;
+    text-align: center;
+    padding: 0 14px;
+    z-index: 1;
+  }
+  .photo-box .placeholder small {
+    display: block;
+    margin-top: 4px;
+    font-size: 9px;
+    font-style: normal;
+  }
+  .photo-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .product .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 10px;
+  }
+  .info-label {
+    color: var(--muted);
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .info-code {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 13px;
+    margin-top: 2px;
+    font-family: "Courier New", monospace;
+  }
+  .info-cat {
+    text-align: right;
+    font-size: 10px;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .product .desc-label {
+    color: var(--muted);
+    font-size: 8px;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .product .desc {
+    color: var(--primary);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  /* ---------- BACK COVER ---------- */
+  .back-cover {
+    background: linear-gradient(135deg, #1F2937 0%, #2c3e50 100%);
+    color: white;
+    padding: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+  }
+  .back-cover .accent-bar {
+    width: 60px;
+    height: 3px;
+    background: var(--accent);
+    margin-bottom: 18px;
+  }
+  .back-cover h2 {
+    color: var(--accent);
+    font-size: 38px;
+    margin-bottom: 16px;
+    font-weight: 800;
+  }
+  .back-cover p { font-size: 13px; margin: 4px 0; line-height: 1.6; }
+  .back-cover .muted { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  .back-cover .contact-block {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    width: 100%;
+    max-width: 320px;
+  }
+
+  /* ---------- FOOTER ---------- */
+  .page-footer {
+    position: absolute;
+    bottom: 12px;
+    left: 30px;
+    right: 30px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--muted);
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+    letter-spacing: 0.5px;
+  }
+
+  /* ---------- CONTROLS ---------- */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: rgba(255,255,255,0.06);
+    padding: 8px 18px;
+    border-radius: 30px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .controls button {
+    background: var(--accent);
+    color: var(--primary);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .controls button:hover:not(:disabled) { transform: scale(1.05); }
+  .controls button:disabled {
+    background: #555;
+    color: #999;
+    cursor: not-allowed;
+  }
+  .page-info {
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 110px;
+    text-align: center;
+  }
+  .page-info .label {
+    color: rgba(255,255,255,0.5);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  @media (max-width: 500px) {
+    .cover h1 { font-size: 42px; }
+    .product { padding: 20px; }
+    .product h3 { font-size: 18px; }
+    .section-header h2 { font-size: 32px; }
+    .section-roman { font-size: 56px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="book-wrapper">
+    <div class="book" id="book"></div>
+  </div>
+  <div class="controls">
+    <button id="btn-prev">◀ Anterior</button>
+    <div class="page-info">
+      <div class="label" id="info-label">Portada</div>
+      <div><span id="current-page">1</span> / <span id="total-pages">1</span></div>
+    </div>
+    <button id="btn-next">Siguiente ▶</button>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // EDITA AQUÍ TUS DATOS DE MARCA
+  // ============================================================
+  const brand = {
+    title: "CATÁLOGO",
+    eyebrow: "EVENTOS Y DECORACIÓN",
+    subtitle: "Mobiliario, mantelería y decoración para tu evento",
+    name: "Tu marca aquí",
+    contact: "www.tusitio.com · contacto@tuempresa.com · +00 000 000 000",
+    email: "contacto@tuempresa.com",
+    phone: "+00 000 000 000",
+    website: "www.tusitio.com",
+  };
+
+  // ============================================================
+  // SECCIONES Y PRODUCTOS
+  // Cambia los nombres, descripciones o agrega productos aquí.
+  // En "photo" pon la ruta de tu imagen, ej: "fotos/01.jpg"
+  // ============================================================
+  const sections = [
+    {
+      roman: "I", title: "Sillas",
+      subtitle: "Variedad de tipos para cada estilo de evento, desde clásico hasta moderno.",
+      color: "#8B6F47",
+      products: [
+        { code: "SIL-01", name: "Línea Completa de Sillas",
+          desc: "Cinco estilos para cada concepto: Tiffany dorada con cojín, Ghost transparente, plegable blanca, Crossback en madera natural y banco/taburete industrial negro. Todas con asiento firme y apilables para fácil montaje.",
+          photo: "fotos/01-tipos-sillas.jpg" },
+      ]
+    },
+    {
+      roman: "II", title: "Fundas y Moñas",
+      subtitle: "Vestido completo de silla: fundas en colores, moñas decorativas y armados para pasillo.",
+      color: "#A0522D",
+      products: [
+        { code: "MON-01", name: "Moñas Premium en Colores",
+          desc: "Moñas anchas en satín, terciopelo, gasa y arpillera con encaje, listas para vestir tu silla Tiffany blanca. Disponibles en rose gold, plata, esmeralda, azul rey, lila y rústico yute.",
+          photo: "fotos/02-monas-colores.jpg" },
+        { code: "FUN-01", name: "Fundas de Silla",
+          desc: "Fundas en spandex con caída elegante, ideales para sillas estándar de banquete. Carta de cinco tonos: marfil, rosa antiguo, rojo borgoña, verde olivo y dorado champagne.",
+          photo: "fotos/03-fundas-colores.jpg" },
+        { code: "FUN-02", name: "Sillas Vestidas para Pasillo",
+          desc: "Sillas Tiffany blancas decoradas con miniramos de rosas en tonos polvo y largas cintas de seda. Perfectas para enmarcar el pasillo de la ceremonia con un toque romántico.",
+          photo: "fotos/04-sillas-pasillo.jpg" },
+      ]
+    },
+    {
+      roman: "III", title: "Mesas",
+      subtitle: "Tipos de mesa para banquete, cóctel, lounge y mesa imperial de madera.",
+      color: "#704214",
+      products: [
+        { code: "MES-01", name: "Línea de Mesas",
+          desc: "Variedad para cada montaje: mesas redondas para banquete, periqueras altas para cóctel, banco rústico tipo imperial, mesa auxiliar cromada y sofá lounge con mesa de centro.",
+          photo: "fotos/05-tipos-mesas.jpg" },
+        { code: "MES-02", name: "Mesa Imperial Rústica",
+          desc: "Mesa imperial en madera natural con caminos de follaje fresco, vajilla de cristal labrado y sillas Crossback blancas. Estilo bohemio elegante, ideal para jardín y campo.",
+          photo: "fotos/06-mesa-rustica.jpg" },
+      ]
+    },
+    {
+      roman: "IV", title: "Mantelería",
+      subtitle: "Manteles, sobre-manteles, servilletas y montaje completo con candelabros.",
+      color: "#5C4033",
+      products: [
+        { code: "MAN-01", name: "Colección de Manteles",
+          desc: "Tres texturas para tres estilos: tafetán beige liso, gasa con encaje sobre rosa pastel y satín azul marino con runner dorado bordado en pedrería.",
+          photo: "fotos/07-manteles.jpg" },
+        { code: "SER-01", name: "Carta de Servilletas",
+          desc: "Servilletas en algodón premium disponibles en doce colores: blanco, rosa, vinotinto, marfil, borgoña, azul rey, azul marino, café, dorado, verde bosque, negro y plata.",
+          photo: "fotos/08-servilletas.jpg" },
+        { code: "MAN-02", name: "Mesa Imperial con Candelabros",
+          desc: "Montaje formal de mesa imperial vestida en blanco con candelabros plateados de cinco brazos, copas de cristal y velas. El montaje más solemne para bodas y cenas de gala al aire libre.",
+          photo: "fotos/09-mesa-candelabros.jpg" },
+      ]
+    },
+    {
+      roman: "V", title: "Montajes",
+      subtitle: "Inspiraciones de montaje completo por estilo y paleta de color.",
+      color: "#7B1F2B",
+      products: [
+        { code: "MNT-01", name: "Banquete Jardín Tropical",
+          desc: "Mesas de madera natural con sillas Crossback dispuestas en jardín tropical, caminos de lino y centros bajos. Velas con luces aéreas crean un ambiente cálido al atardecer.",
+          photo: "fotos/10-banquete-tropical.jpg" },
+        { code: "MNT-02", name: "Romance Vinotinto y Oro",
+          desc: "Mesas redondas con manteles blancos y moñas en satín vinotinto sobre sillas Tiffany blancas. Centro floral en rosas blancas y bordó, vajilla con detalles dorados.",
+          photo: "fotos/11-vinotinto-oro.jpg" },
+        { code: "MNT-03", name: "Verde Primavera",
+          desc: "Manteles redondos en verde lima con sobre-manteles blancos, sillas con funda y centros pequeños en macetas. Cortinas con olán verde acentúan el techo del salón.",
+          photo: "fotos/12-verde-primavera.jpg" },
+        { code: "MNT-04", name: "Cielo Azul",
+          desc: "Mesas redondas vestidas en azul cielo y blanco con moños de organza, centros de hortensias blancas y detalles en globos. Ideal para baby shower, bautizo o cumpleaños temáticos.",
+          photo: "fotos/13-azul-bebe.jpg" },
+        { code: "MNT-05", name: "Brillo Mediodía",
+          desc: "Mesas redondas con sobre-manteles amarillos sobre fondo blanco, moñas a juego y centros florales en jarrones de vidrio. Backdrop con luces para fotos al aire libre.",
+          photo: "fotos/14-amarillo.jpg" },
+        { code: "MNT-06", name: "Náutico Azul Marino",
+          desc: "Mesas rectangulares vestidas en blanco con caminos azul marino bordados, moñas azul marino sobre sillas con funda y centros pequeños con hortensias blancas.",
+          photo: "fotos/15-nautico.jpg" },
+        { code: "MNT-07", name: "Cumpleaños Rosa Pastel",
+          desc: "Mesas redondas con manteles rosa empolvado, sillas Crossback de madera natural y vajilla en tonos durazno. Ambiente fresco y femenino para celebraciones diurnas.",
+          photo: "fotos/16-rosa-pastel.jpg" },
+        { code: "MNT-08", name: "Black Tie Aniversario",
+          desc: "Montaje sobrio en blanco y negro con manteles blancos sobre mesa larga, sillas plegables negras y guirnalda dorada. Letrero luminoso como punto focal de la celebración.",
+          photo: "fotos/17-blacktie.jpg" },
+        { code: "MNT-09", name: "Realeza Azul Rey",
+          desc: "Mantel azul rey con textura, sillas Tiffany plateadas con cojín blanco, vajilla cristalina y centro alto en hortensias azules y blancas. Elegancia clásica para evento formal.",
+          photo: "fotos/18-azul-rey.jpg" },
+        { code: "MNT-10", name: "Selva Botánica",
+          desc: "Pérgola de bambú con techo de follaje tropical y bombillas de cristal colgantes. Mesa imperial con caminos verdes y sillas con funda negra para un look orgánico y elegante.",
+          photo: "fotos/19-selva.jpg" },
+      ]
+    },
+    {
+      roman: "VI", title: "Backdrops y Decoración",
+      subtitle: "Fondos temáticos, mesa de postres, espejos de bienvenida y decoración aérea.",
+      color: "#6B3F69",
+      products: [
+        { code: "BCK-01", name: "Arco Hexagonal Dorado",
+          desc: "Estructura hexagonal en metal dorado con cortinas rosadas semi-transparentes y micro luces. Arreglos florales en rosa empolvado, verde y blanco con letrero neón personalizable.",
+          photo: "fotos/20-hexagonal.jpg" },
+        { code: "BCK-02", name: "Rombo Dorado Romántico",
+          desc: "Marco rombo en dorado sobre cortina blanca y rosa. Arreglo floral superior en tonos rosa y blanco, complementado con bases doradas y bouquets a juego.",
+          photo: "fotos/21-rombo.jpg" },
+        { code: "BCK-03", name: "Mesa de Postres Rose Gold",
+          desc: "Backdrop circular floral con letrero personalizado, mesas altas en metal cobre y globos rose gold, cromo y burdeos. Mesa de postres con cake, cupcakes y dulces.",
+          photo: "fotos/22-postres-rose.jpg" },
+        { code: "BCK-04", name: "Quinceañera Royal Blue",
+          desc: "Backdrop con glitter azul marino y arco lateral plata, letras luminosas '15' y nombre personalizado. Globos azul, blanco y dorado con pampas y flores blancas.",
+          photo: "fotos/23-xv-azul.jpg" },
+        { code: "BCK-05", name: "Quinceañera Rosa Glamour",
+          desc: "Cortina con cascada de luces cálidas, letras '15 años' en glitter rose gold, sillón vintage tapizado, arco de globos rosa y rose gold con faroles dorados al piso.",
+          photo: "fotos/24-xv-rosa.jpg" },
+        { code: "BCK-06", name: "Espejo de Bienvenida",
+          desc: "Espejo arco dorado con tipografía personalizada (nombre y fecha), guirnalda floral en rosa empolvado y blanco. Faroles dorados con velas a la base del espejo.",
+          photo: "fotos/25-espejo.jpg" },
+        { code: "BCK-07", name: "Backdrop Mariposas",
+          desc: "Doble arco backdrop en rosa empolvado con mariposas en relieve y nombre personalizado. Globos en degradé rosa, rose gold y crema. Pedestal central para pastel.",
+          photo: "fotos/26-mariposas.jpg" },
+        { code: "BCK-08", name: "Alas de Ángel",
+          desc: "Backdrop blanco con doble nombre personalizado y alas iluminadas a los costados. Globos blancos y dorados con palmas secas. Perfecto para bautizos, comuniones y baby shower.",
+          photo: "fotos/27-alas.jpg" },
+        { code: "BCK-09", name: "Arcos Iluminados Boho",
+          desc: "Triple arco blanco con perfil luminoso LED, letrero personalizado con nombres y guirnaldas de rosas blancas y baby breath. Pedestal central para el pastel de bodas.",
+          photo: "fotos/28-arcos-blancos.jpg" },
+        { code: "DEC-01", name: "Decoración de Techo Vinotinto",
+          desc: "Decoración aérea con cortinas vinotinto y crema en abanico con corona floral central. Backdrop a juego con falda de tul vinotinto en la mesa principal de novios.",
+          photo: "fotos/29-techo-vinotinto.jpg" },
+        { code: "DEC-02", name: "Altar Floral Pastel",
+          desc: "Escenario con arco central blanco y abundante decoración floral en tonos pastel (rosa, lavanda, durazno y blanco). Mesa con mantel de encaje para los novios.",
+          photo: "fotos/30-altar-pastel.jpg" },
+      ]
+    },
+    {
+      roman: "VII", title: "Iluminación",
+      subtitle: "Pasillos iluminados, faroles, velas y guirnaldas para crear atmósfera.",
+      color: "#B8860B",
+      products: [
+        { code: "ILU-01", name: "Pasillo Luz de Estrellas",
+          desc: "Tarima espejo con miles de micro-luces cálidas y guirnaldas aéreas, enmarcada por cipreses iluminados. Arco floral con luces al final del pasillo para ceremonia nocturna.",
+          photo: "fotos/31-pasillo-luz.jpg" },
+        { code: "ILU-02", name: "Faroles con Velas",
+          desc: "Faroles cuadrados blancos con velas LED, dispuestos en el suelo entre sillas vestidas con tul. Pétalos blancos esparcidos para ceremonia nocturna íntima y romántica.",
+          photo: "fotos/32-faroles.jpg" },
+      ]
+    },
+    {
+      roman: "VIII", title: "Pista y Show",
+      subtitle: "Pista de baile, esferas disco, efectos especiales y shows para la fiesta.",
+      color: "#1B3A57",
+      products: [
+        { code: "SHW-01", name: "Robot LED",
+          desc: "Show con robot LED iluminado para apertura de pista o entrada de festejados. Coreografía interactiva con luces, sonido y efectos de humo. Energía garantizada para la fiesta.",
+          photo: "fotos/33-robot.jpg" },
+        { code: "PIS-01", name: "Pista Espejo Iluminada",
+          desc: "Pista de baile tipo espejo con luces LED integradas, esferas burbuja iluminadas colgantes y candelabro central. Efecto deslumbrante para fotos y video.",
+          photo: "fotos/34-pista-espejo.jpg" },
+        { code: "PIS-02", name: "Cielo de Esferas Disco",
+          desc: "Decoración aérea con bolas disco de diferentes tamaños, cortinas metálicas y haces de luz cruzados. La fiesta cobra vida con efecto estilo discoteca moderna.",
+          photo: "fotos/35-disco.jpg" },
+        ]
+    },
+  ];
+
+  // ============================================================
+  // (No necesitas editar abajo a menos que quieras cambiar diseño)
+  // ============================================================
+
+  const book = document.getElementById('book');
+  const pageEls = [];
+  const pageMeta = []; // { type, label, bookmark? }
+
+  function makePage(innerHTML, meta = {}) {
+    const page = document.createElement('div');
+    page.className = 'page';
+    page.innerHTML = `
+      <div class="face front">
+        ${innerHTML}
+        <div class="nav-zone left"></div>
+        <div class="nav-zone right"></div>
+      </div>
+      <div class="face back"></div>
+    `;
+    book.appendChild(page);
+    pageEls.push(page);
+    pageMeta.push(meta);
+    return pageEls.length - 1;
+  }
+
+  // ---------- Cover ----------
+  makePage(`
+    <div class="cover">
+      <div>
+        <div class="accent-bar"></div>
+        <div class="eyebrow">${brand.eyebrow}</div>
+        <h1>${brand.title}</h1>
+        <div class="subtitle">${brand.subtitle}</div>
+      </div>
+      <div>
+        <div class="brand">${brand.name}</div>
+        <div class="brand-line">${brand.contact}</div>
+      </div>
+      <div class="cover-hint">Clic a la derecha para pasar la página →</div>
+    </div>
+  `, { type: 'cover', label: 'Portada' });
+
+  // ---------- Build all section + product pages ----------
+  // First pass: assign section index page numbers
+  const sectionStartIdx = []; // page index where each section header lives
+  let pageCount = 1; // cover = 0, next page is 1
+
+  // We need to build the index page first showing all sections,
+  // but linking requires knowing target pages. So we plan first.
+  // After cover (0), index will be at 1. Then sections.
+  let planIdx = 2; // after cover (0) and index (1)
+  sections.forEach((sec) => {
+    sectionStartIdx.push(planIdx);
+    planIdx += 1 + sec.products.length;
+  });
+
+  // ---------- Index ----------
+  const indexItemsHTML = sections.map((sec, i) => `
+    <li class="index-item" data-goto="${sectionStartIdx[i]}">
+      <div class="index-roman">${sec.roman}.</div>
+      <div class="index-info">
+        <div class="index-name">${sec.title}</div>
+        <div class="index-desc">${sec.subtitle}</div>
+      </div>
+      <div class="index-count">${sec.products.length} ${sec.products.length === 1 ? 'ítem' : 'ítems'}</div>
+    </li>
+  `).join('');
+
+  makePage(`
+    <div class="index">
+      <h2>Índice</h2>
+      <div class="rule"></div>
+      <div class="hint">Haz clic en cualquier categoría para ir directo a su sección.</div>
+      <ul class="index-list">${indexItemsHTML}</ul>
+      <div class="page-footer"><span>${brand.name.toUpperCase()}</span><span>Índice</span></div>
+    </div>
+  `, { type: 'index', label: 'Índice' });
+
+  // ---------- Sections + Products ----------
+  sections.forEach((sec, secIdx) => {
+    // Section header page
+    makePage(`
+      <div class="section-header" style="background: linear-gradient(135deg, ${sec.color} 0%, ${shade(sec.color, -0.25)} 100%);">
+        <div class="top-link" data-goto="1">← Volver al índice</div>
+        <div class="section-roman">${sec.roman}</div>
+        <div class="section-eyebrow">CATEGORÍA · ${sec.roman}</div>
+        <h2>${sec.title}</h2>
+        <div class="section-bar"></div>
+        <div class="section-subtitle">${sec.subtitle}</div>
+        <div class="section-count">${sec.products.length} ${sec.products.length === 1 ? 'PRODUCTO' : 'PRODUCTOS'}</div>
+      </div>
+    `, { type: 'section', label: sec.title });
+
+    // Product pages
+    sec.products.forEach((p, pIdx) => {
+      const photoHTML = p.photo
+        ? `<img src="${p.photo}" alt="${p.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+           <div class="placeholder" style="display:none">[ Foto: ${p.photo} ]<small>Pega tu imagen con este nombre en la carpeta "fotos"</small></div>`
+        : `<div class="placeholder">[ Espacio para foto ]<small>Edita el HTML y agrega ruta en "photo"</small></div>`;
+
+      makePage(`
+        <div class="product">
+          <div class="top-link" data-goto="${sectionStartIdx[secIdx]}">← Volver a ${sec.title}</div>
+          <div class="label" style="color: ${sec.color}">${sec.roman}.${pIdx + 1} · ${sec.title.toUpperCase()}</div>
+          <h3>${p.name}</h3>
+          <div class="rule" style="background: ${sec.color}"></div>
+          <div class="photo-box">${photoHTML}</div>
+          <div class="info-row">
+            <div>
+              <div class="info-label">CÓDIGO</div>
+              <div class="info-code">${p.code}</div>
+            </div>
+            <div class="info-cat">${sec.title}</div>
+          </div>
+          <div class="desc-label">DESCRIPCIÓN</div>
+          <div class="desc">${p.desc}</div>
+          <div class="page-footer"><span>${brand.name.toUpperCase()}</span><span>${sec.title} · ${p.code}</span></div>
+        </div>
+      `, { type: 'product', label: `${sec.title} — ${p.name}` });
+    });
+  });
+
+  // ---------- Back Cover ----------
+  makePage(`
+    <div class="back-cover">
+      <div class="accent-bar"></div>
+      <h2>Gracias</h2>
+      <p>Para cotización personalizada,<br>no dudes en contactarnos.</p>
+      <div class="contact-block">
+        <p class="muted">${brand.email}</p>
+        <p class="muted">${brand.phone}</p>
+        <p class="muted">${brand.website}</p>
+      </div>
+    </div>
+  `, { type: 'back-cover', label: 'Contraportada' });
+
+  function shade(hex, percent) {
+    const num = parseInt(hex.replace('#',''), 16);
+    const amt = Math.round(2.55 * percent * 100);
+    const R = Math.max(0, Math.min(255, (num >> 16) + amt));
+    const G = Math.max(0, Math.min(255, ((num >> 8) & 0xFF) + amt));
+    const B = Math.max(0, Math.min(255, (num & 0xFF) + amt));
+    return '#' + ((R << 16) | (G << 8) | B).toString(16).padStart(6, '0');
+  }
+
+  // ============================================================
+  // NAVIGATION
+  // ============================================================
+  let current = 0;
+  const total = pageEls.length;
+  document.getElementById('total-pages').textContent = total;
+
+  pageEls.forEach((p, i) => { p.style.zIndex = total - i; });
+
+  function updateUI() {
+    document.getElementById('current-page').textContent = current + 1;
+    document.getElementById('info-label').textContent = pageMeta[current].label;
+    document.getElementById('btn-prev').disabled = current === 0;
+    document.getElementById('btn-next').disabled = current === total - 1;
+  }
+
+  function goTo(target) {
+    target = Math.max(0, Math.min(total - 1, target));
+    if (target === current) return;
+    if (target > current) {
+      for (let i = current; i < target; i++) pageEls[i].classList.add('flipped');
+    } else {
+      for (let i = current - 1; i >= target; i--) pageEls[i].classList.remove('flipped');
+    }
+    current = target;
+    updateUI();
+  }
+
+  document.getElementById('btn-next').addEventListener('click', () => goTo(current + 1));
+  document.getElementById('btn-prev').addEventListener('click', () => goTo(current - 1));
+
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('nav-zone')) {
+      if (e.target.classList.contains('right')) goTo(current + 1);
+      else goTo(current - 1);
+    }
+    const gotoAttr = e.target.closest('[data-goto]');
+    if (gotoAttr) {
+      e.stopPropagation();
+      goTo(parseInt(gotoAttr.dataset.goto, 10));
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') goTo(current + 1);
+    if (e.key === 'ArrowLeft') goTo(current - 1);
+  });
+
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 40) goTo(current + (dx < 0 ? 1 : -1));
+  });
+
+  updateUI();
+</script>
+</body>
+</html>
